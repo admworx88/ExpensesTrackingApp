@@ -1,0 +1,159 @@
+﻿@model ExpensesTrackingApp.Models.Expenses
+
+
+@{
+    ViewData["Title"] = "Add";
+}
+
+<h2>
+    Expenses - @ViewBag.Mode
+</h2>
+
+<label>Enter the details for the expense and click 'Save'</label>
+<hr />
+<div class="row">
+    <div class="col-md-5">
+        <form asp-action="AddEdit">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input id="eID" type="hidden" asp-for="Id" />
+            <div class="form-group">
+                <label asp-for="ExpenseDate" class="control-label"></label>
+                <input type="date" id="txtDate" asp-for="ExpenseDate" class="form-control" placeholder="mm/dd/yyyy"  />
+                <span asp-validation-for="ExpenseDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label class="control-label mr-2">Customer</label>
+                <select class="d-block" id="customerID"><option value="0" selected>Select a Customer</option></select>
+                <div class="d-block"><span id="textWarning" class="text-danger d-none">This field is required.</span></div>
+            </div>
+            <div class="form-group">
+                <label asp-for="ProjectId" class="control-label">Project</label>
+                <select class="d-block" asp-for="ProjectId" id="projectsID"><option value="0" selected>Select a Project</option></select>
+                <span asp-validation-for="ProjectId" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Name" class="control-label"></label>
+                <input id="txtCustID" asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Amount" class="control-label"></label>
+                <input id="txtAmount" asp-for="Amount" onkeypress="return ValidateNumber(event)" placeholder="0.00" class="form-control" />
+                <span asp-validation-for="Amount" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Description" class="control-label"></label>
+                <textarea rows="4" asp-for="Description" class="form-control"></textarea>
+            </div>
+            <div class="form-group">
+                <button name="button" onclick="validateCustomer()" value="One" class="btn btn-success mr-2" asp-action="AddEdit">Save</button>
+                <button name="button" onclick="validateCustomer()" value="Two" class="btn btn-secondary mr-2" asp-action="AddEdit">@TempData["ButtonValue"]</button>
+                @*<input type="submit" value="@ViewBag.Button" class="btn btn-secondary mr-2" />*@
+                <a asp-action="Index" class="btn btn-light">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script type="text/javascript">
+    var eID = $("#eID").val();
+
+
+    $(document).ready(() => {
+        if (eID == 0) $("#txtAmount").val("");
+        $("#projectsID").prop("disabled", true);
+        $("#customerID").on('change', (e) => {
+            var optVal = $("#customerID option:selected").val();
+            var optText = $("#customerID option:selected").text();
+            showValue(optVal, optText);
+        });
+        ValidateNumber("#txtAmnt");
+        getCustomers();
+
+    });
+
+        function validateCustomer() {
+            if ($("#customerID").val() == 0) {
+                $("#textWarning").removeClass("d-none");
+            } else {
+                $("#textWarning").addClass("d-none");
+            }
+        }
+
+    function showValue(val, text) {
+        if (val == 0) {
+            projectDrp("#projectsID");
+            $("#txtCustID").val("");
+            $("#txtDate").val("");
+
+            return;
+        }
+            $.ajax({
+                cache: false,
+                type: "POST",
+                url: '@Url.Action("GetProjects", "Expenses")',
+                data: { "Id": val },
+                success: (json) => {
+                    $("#projectsID").empty();
+                    var obj = Object.keys(json).length;
+                    console.log(obj);
+                    if (obj < 1) {
+                        $("#projectsID").prop("disabled", true);
+                        $("#projectsID").append('<option value="0">Select a Project</option>');
+                        alert("No data under " + text);
+                    } else {
+                        $.each(json, (key, data) => {
+                            $("#projectsID").append('<option value="' + data.customerId + '">' + data.name + '</option>');
+                        })
+
+                        $("#projectsID").prop("disabled", false);
+                        $("#txtCustID").val();
+                    }
+                },
+                error: () => {
+                    $("#projectsID").prop("disabled", true);
+                    $("#txtCustID").val();
+                    alert("Data Not Found");
+                }
+            });
+    }
+
+    function getCustomers() {
+            $.ajax({
+                cache: false,
+                type: "GET",
+                url: '@Url.Action("GetCustomers", "Expenses")',
+                data: { "Id": eID },
+                success: (json) => {
+                    $("#customerID").empty();
+                    $.each(json, (key, data) => {
+                        $("#customerID").append('<option value="' + data.id + '">' + data.name + '</option>');
+                    })
+                    $("#customerID").prop("disabled", false);
+                    showValue($("#customerID").val());
+                },
+                error: () => {
+                    $("#customerID").prop("disabled", true);
+                }
+            });
+    }
+
+    function projectDrp(id) {
+        $(id).empty();
+        $(id).append('<option value="0">Select a Project </option>');
+        $(id).prop("disabled", true);
+    }
+    function ValidateNumber(e) {
+        var evt = (e) ? e : window.event;
+        var charCode = (evt.keyCode) ? evt.keyCode : evt.which;
+        if (charCode > 31 && (charCode < 48 || charCode > 57) && charCode != 46) {
+            return false;
+        }
+        return true;
+    };
+    </script>
+}
+
