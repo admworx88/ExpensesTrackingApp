@@ -282,8 +282,18 @@ namespace ExpensesTrackingApp.Controllers
             return cL;
         }
 
+        //Post: Edit Transaction
         [HttpPost]
-        public JsonResult GetProjects(int Id)
+        public JsonResult GetProjectsByProjectID(int Id)
+        {
+            List<Projects> cP = new List<Projects>();
+            cP = (from c in _context.Projects select c).Where(s => s.Id.Equals(Id)).ToList();
+            return Json(cP);
+        }
+
+        //Post: Add Transaction
+        [HttpPost]
+        public JsonResult GetProjectByCustomerID(int Id)
         {
             List<Projects> cP;
             if (Id == 0)

@@ -27,6 +27,7 @@
                 <div class="d-block"><span id="textWarning" class="text-danger d-none">This field is required.</span></div>
             </div>
             <div class="form-group">
+                <input id="pID" type="hidden" asp-for="ProjectId" />
                 <label asp-for="ProjectId" class="control-label">Project</label>
                 <select class="d-block" asp-for="ProjectId" id="projectsID"><option value="0" selected>Select a Project</option></select>
                 <span asp-validation-for="ProjectId" class="text-danger"></span>
@@ -58,22 +59,40 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    <script type="text/javascript">
+<script type="text/javascript">
     var eID = $("#eID").val();
-
-
     $(document).ready(() => {
-        if (eID == 0) $("#txtAmount").val("");
-        $("#projectsID").prop("disabled", true);
-        $("#customerID").on('change', (e) => {
-            var optVal = $("#customerID option:selected").val();
-            var optText = $("#customerID option:selected").text();
-            showValue(optVal, optText);
-        });
-        ValidateNumber("#txtAmnt");
-        getCustomers();
+        if (eID == 0) {
+            $("#txtAmount").val("");
+            $("#projectsID").prop("disabled", true);
+            ValidateNumber("#txtAmnt");
+            getCustomers(0);
+            $("#customerID").on('change', (e) => {
+                if ($("#pID").length > 0) $("#pID").remove();
+                var optVal = $("#customerID option:selected").val();
+                var optText = $("#customerID option:selected").text();
+                showValue(optVal, optText);
+            });
+        } else {
+            if ($("#pID").length > 0) {
+                var pID = $("#pID").val();
+               $("#projectsID").prop("disabled", true);
+                getProjectData(pID);
+            }
+            $("#customerID").on('change', (e) => {
+                var optVal = $("#customerID option:selected").val();
+                var optText = $("#customerID option:selected").text();
+                $("#pID").remove();
+                showValue(optVal, optText);
+            });
 
+          
+        }
+
+       
     });
+
+
 
         function validateCustomer() {
             if ($("#customerID").val() == 0) {
@@ -81,6 +100,28 @@
             } else {
                 $("#textWarning").addClass("d-none");
             }
+        }
+
+        function getProjectData(ID) {
+             $.ajax({
+                cache: false,
+                type: "POST",
+                url: '@Url.Action("GetProjectsByProjectID", "Expenses")',
+                 data: { "Id": ID },
+                success: (json) => {
+                    $("#projectsID").empty();
+                    $.each(json, (key, data) => {
+                        $("#projectsID").append('<option value="' + data.id + '">' + data.name + '</option>');
+                        getCustomers(data.customerId);
+                    })
+                    $("#txtCustID").val();
+                },
+                error: () => {
+                    $("#projectsID").prop("disabled", true);
+                    $("#txtCustID").val();
+                    alert("Data Not Found");
+                }
+            });
         }
 
     function showValue(val, text) {
@@ -94,19 +135,18 @@
             $.ajax({
                 cache: false,
                 type: "POST",
-                url: '@Url.Action("GetProjects", "Expenses")',
+                url: '@Url.Action("GetProjectByCustomerID", "Expenses")',
                 data: { "Id": val },
                 success: (json) => {
                     $("#projectsID").empty();
                     var obj = Object.keys(json).length;
-                    console.log(obj);
                     if (obj < 1) {
                         $("#projectsID").prop("disabled", true);
                         $("#projectsID").append('<option value="0">Select a Project</option>');
                         alert("No data under " + text);
                     } else {
                         $.each(json, (key, data) => {
-                            $("#projectsID").append('<option value="' + data.customerId + '">' + data.name + '</option>');
+                            $("#projectsID").append('<option value="' + data.id + '">' + data.name + '</option>');
                         })
 
                         $("#projectsID").prop("disabled", false);
@@ -119,21 +159,21 @@
                     alert("Data Not Found");
                 }
             });
-    }
+        }
 
-    function getCustomers() {
+    function getCustomers(ID) {
             $.ajax({
                 cache: false,
                 type: "GET",
                 url: '@Url.Action("GetCustomers", "Expenses")',
-                data: { "Id": eID },
+                data: { "Id": ID },
                 success: (json) => {
                     $("#customerID").empty();
                     $.each(json, (key, data) => {
                         $("#customerID").append('<option value="' + data.id + '">' + data.name + '</option>');
                     })
                     $("#customerID").prop("disabled", false);
-                    showValue($("#customerID").val());
+                    if (eID == 0) showValue($("#customerID").val());
                 },
                 error: () => {
                     $("#customerID").prop("disabled", true);
@@ -154,6 +194,6 @@
         }
         return true;
     };
-    </script>
+</script>
 }
 
